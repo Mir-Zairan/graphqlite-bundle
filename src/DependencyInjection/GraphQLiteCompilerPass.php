@@ -85,16 +85,11 @@ class GraphQLiteCompilerPass implements CompilerPassInterface
         assert(is_string($firewallName));
         $firewallConfigServiceName = 'security.firewall.map.config.'.$firewallName;
 
-        // 2 seconds of TTL in environment mode. Otherwise, let's cache forever!
-
         $schemaFactory = $container->getDefinition(SchemaFactory::class);
 
-        $env = $container->getParameter('kernel.environment');
-        if ($env === 'prod') {
-            $schemaFactory->addMethodCall('prodMode');
-        } elseif ($env === 'dev') {
-            $schemaFactory->addMethodCall('devMode');
-        }
+        $debug = $container->getParameter('kernel.debug');
+        assert(is_bool($debug));
+        $schemaFactory->addMethodCall($debug ? 'devMode' : 'prodMode');
 
         $disableLogin = false;
         if ($container->getParameter('graphqlite.security.enable_login') === 'auto'

@@ -99,6 +99,23 @@ class FunctionalTest extends TestCase
         ], $result);
     }
 
+    /**
+     * @dataProvider schemaCachingModeProvider
+     */
+    public function testSchemaCachingFollowsDebug(bool $debug, string $expectedMode): void
+    {
+        $kernel = new GraphQLiteTestingKernel(debug: $debug);
+        $kernel->boot();
+
+        $this->assertContains($expectedMode, $kernel->getContainer()->getParameter('graphqlite.tests.schema_factory_calls'));
+    }
+
+    public function schemaCachingModeProvider(): iterable
+    {
+        yield 'debug rebuilds the schema' => [true, 'devMode'];
+        yield 'no debug caches the schema' => [false, 'prodMode'];
+    }
+
     public function testErrors(): void
     {
         $kernel = new GraphQLiteTestingKernel();
