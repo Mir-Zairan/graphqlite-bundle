@@ -87,9 +87,9 @@ class GraphQLiteCompilerPass implements CompilerPassInterface
 
         $schemaFactory = $container->getDefinition(SchemaFactory::class);
 
-        $debug = $container->getParameter('kernel.debug');
-        assert(is_bool($debug));
-        $schemaFactory->addMethodCall($debug ? 'devMode' : 'prodMode');
+        $autoReload = $container->getParameter('graphqlite.schema.auto_reload');
+        assert(is_bool($autoReload));
+        $schemaFactory->addMethodCall($autoReload ? 'devMode' : 'prodMode');
 
         $disableLogin = false;
         if ($container->getParameter('graphqlite.security.enable_login') === 'auto'

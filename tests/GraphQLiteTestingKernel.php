@@ -71,6 +71,11 @@ class GraphQLiteTestingKernel extends Kernel implements CompilerPassInterface
     private $cacheBaseDir;
 
     /**
+     * @var bool|null
+     */
+    private $schemaAutoReload;
+
+    /**
      * @param string[] $controllersNamespace
      * @param string[] $typesNamespace
      */
@@ -83,9 +88,12 @@ class GraphQLiteTestingKernel extends Kernel implements CompilerPassInterface
                                 ?int $maximumQueryDepth = null,
                                 array $controllersNamespace = ['TheCodingMachine\\GraphQLite\\Bundle\\Tests\\Fixtures\\Controller\\'],
                                 array $typesNamespace = ['TheCodingMachine\\GraphQLite\\Bundle\\Tests\\Fixtures\\Types\\', 'TheCodingMachine\\GraphQLite\\Bundle\\Tests\\Fixtures\\Entities\\'],
-                                bool $debug = true)
+                                bool $debug = true,
+                                string $environment = 'test',
+                                ?bool $schemaAutoReload = null)
     {
-        parent::__construct('test', $debug);
+        parent::__construct($environment, $debug);
+        $this->schemaAutoReload = $schemaAutoReload;
         // Without debug the kernel reuses a dumped container without checking whether its sources
         // changed, which would hide an edit to the compiler pass from the tests.
         $this->cacheBaseDir = $debug ? __DIR__.'/../cache/' : sys_get_temp_dir().'/graphqlite-bundle-'.uniqid().'/';
@@ -208,6 +216,10 @@ class GraphQLiteTestingKernel extends Kernel implements CompilerPassInterface
                 $graphqliteConf['security']['maximum_query_depth'] = $this->maximumQueryDepth;
             }
 
+            if ($this->schemaAutoReload !== null) {
+                $graphqliteConf['schema']['auto_reload'] = $this->schemaAutoReload;
+            }
+
             $container->loadFromExtension('graphqlite', $graphqliteConf);
         });
         $confDir = $this->getProjectDir().'/tests/Fixtures/config';
@@ -232,7 +244,9 @@ class GraphQLiteTestingKernel extends Kernel implements CompilerPassInterface
             .'_'
             .($this->introspection?'withIntrospection':'withoutIntrospection');
 
-        return $this->cacheBaseDir.$prefix.'_'.$this->maximumQueryComplexity.'_'.$this->maximumQueryDepth.'_'.md5(serialize($this->controllersNamespace).'_'.md5(serialize($this->typesNamespace)));
+        $schemaCaching = $this->schemaAutoReload === null ? 'defaultReload' : ($this->schemaAutoReload ? 'autoReload' : 'noAutoReload');
+
+        return $this->cacheBaseDir.$this->environment.'_'.$schemaCaching.'_'.$prefix.'_'.$this->maximumQueryComplexity.'_'.$this->maximumQueryDepth.'_'.md5(serialize($this->controllersNamespace).'_'.md5(serialize($this->typesNamespace)));
     }
 
     public function process(ContainerBuilder $container): void

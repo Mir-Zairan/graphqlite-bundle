@@ -102,18 +102,23 @@ class FunctionalTest extends TestCase
     /**
      * @dataProvider schemaCachingModeProvider
      */
-    public function testSchemaCachingFollowsDebug(bool $debug, string $expectedMode): void
+    public function testSchemaCachingFollowsDebugUnlessOverridden(string $environment, bool $debug, ?bool $autoReload, string $expectedMode): void
     {
-        $kernel = new GraphQLiteTestingKernel(debug: $debug);
+        $kernel = new GraphQLiteTestingKernel(debug: $debug, environment: $environment, schemaAutoReload: $autoReload);
         $kernel->boot();
 
-        $this->assertContains($expectedMode, $kernel->getContainer()->getParameter('graphqlite.tests.schema_factory_calls'));
+        $calls = $kernel->getContainer()->getParameter('graphqlite.tests.schema_factory_calls');
+
+        $this->assertContains($expectedMode, $calls);
+        $this->assertNotContains($expectedMode === 'devMode' ? 'prodMode' : 'devMode', $calls);
     }
 
     public function schemaCachingModeProvider(): iterable
     {
-        yield 'debug rebuilds the schema' => [true, 'devMode'];
-        yield 'no debug caches the schema' => [false, 'prodMode'];
+        yield 'staging without debug caches the schema' => ['staging', false, null, 'prodMode'];
+        yield 'prod with debug reloads the schema' => ['prod', true, null, 'devMode'];
+        yield 'staging can ask to keep reloading' => ['staging', false, true, 'devMode'];
+        yield 'dev can ask to keep caching' => ['dev', true, false, 'prodMode'];
     }
 
     public function testErrors(): void
